@@ -14,15 +14,18 @@ public class GoalService {
 
     private final GoalRepository repository;
     private final GoalMapper mapper;
+    private final NotificationService notificationService;
 
-    public GoalService(GoalRepository repository, GoalMapper mapper) {
+    public GoalService(GoalRepository repository, GoalMapper mapper, NotificationService notificationService) {
         this.repository = repository;
         this.mapper = mapper;
+        this.notificationService = notificationService;
     }
 
     public GoalResponse createGoal(GoalRequest request) {
         Goal goal = mapper.toEntity(request);
         Goal saved = repository.save(goal);
+        notificationService.checkGoalDeadlines();
         return mapper.toResponse(saved);
     }
 
@@ -45,6 +48,7 @@ public class GoalService {
         goal.setDescription(request.getDescription());
         goal.setDeadline(request.getDeadline());
         Goal saved = repository.save(goal);
+        notificationService.checkGoalDeadlines();
         return mapper.toResponse(saved);
     }
 
