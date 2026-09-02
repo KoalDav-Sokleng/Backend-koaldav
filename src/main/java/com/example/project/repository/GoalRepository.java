@@ -11,4 +11,8 @@ import java.util.List;
 @Repository
 public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByStatusNotAndDeadlineBetween(GoalStatus status, LocalDate startDate, LocalDate endDate);
+
+    List<Goal> findByStatus(GoalStatus status);
+
+    List<Goal> findByStatusAndDeadlineBefore(GoalStatus status, LocalDate date);
 }

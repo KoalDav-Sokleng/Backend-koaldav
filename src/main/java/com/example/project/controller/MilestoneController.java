@@ -4,10 +4,14 @@ import com.example.project.dto.request.MilestoneRequest;
 import com.example.project.dto.response.MilestoneResponse;
 import com.example.project.service.MilestoneService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/goals/projects/{goalId}/milestones")
+@RequestMapping("/api/goals/{goalId}/milestones")
+@CrossOrigin(origins = "*")
 public class MilestoneController {
     private final MilestoneService service;
 
@@ -18,13 +22,12 @@ public class MilestoneController {
     @PostMapping
     public MilestoneResponse create(
             @PathVariable Long goalId,
-            @Valid @RequestBody MilestoneRequest request
-    ){
+            @Valid @RequestBody MilestoneRequest request) {
         return service.create(goalId, request);
     }
 
     @GetMapping
-    public java.util.List<MilestoneResponse> getMilestones(@PathVariable Long goalId) {
+    public List<MilestoneResponse> getMilestones(@PathVariable Long goalId) {
         return service.getMilestonesByGoalId(goalId);
     }
 
@@ -35,6 +38,22 @@ public class MilestoneController {
         return service.getMilestone(goalId, milestoneId);
     }
 
+    @PutMapping("/{milestoneId}")
+    public MilestoneResponse update(
+            @PathVariable Long goalId,
+            @PathVariable Long milestoneId,
+            @Valid @RequestBody MilestoneRequest request) {
+        return service.updateMilestone(goalId, milestoneId, request);
+    }
+
+    @DeleteMapping("/{milestoneId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long goalId,
+            @PathVariable Long milestoneId) {
+        service.deleteMilestone(goalId, milestoneId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{milestoneId}/complete")
     public MilestoneResponse complete(
             @PathVariable Long goalId,
@@ -42,5 +61,3 @@ public class MilestoneController {
         return service.completeMilestone(goalId, milestoneId);
     }
 }
-
-

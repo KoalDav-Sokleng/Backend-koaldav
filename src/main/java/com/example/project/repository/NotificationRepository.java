@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     List<Notification> findByUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId);
-    Optional<Notification> findByUserIdAndGoalId(Long userId, Long goalId);
+
+    Optional<Notification> findByUserIdAndGoalIdAndGoalType(Long userId, Long goalId, String goalType);
 }

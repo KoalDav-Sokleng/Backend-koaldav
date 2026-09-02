@@ -5,30 +5,32 @@ import com.example.project.dto.response.GoalResponse;
 import com.example.project.service.GoalService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/goals/projects")
+@RequestMapping("/api/goals")
 public class GoalController {
     private final GoalService service;
 
-    public GoalController(GoalService service){
+    public GoalController(GoalService service) {
         this.service = service;
     }
 
     @PostMapping
-    public GoalResponse createGoal(@Valid @RequestBody GoalRequest request){
+    public GoalResponse createGoal(@Valid @RequestBody GoalRequest request) {
         return service.createGoal(request);
     }
 
     @GetMapping("/{id}")
-    public GoalResponse getGoal(@PathVariable Long id){
+    public GoalResponse getGoal(@PathVariable Long id) {
         return service.getGoal(id);
     }
 
     @GetMapping
-    public List<GoalResponse> getAllGoals() {
+    public List<GoalResponse> getAllGoals(@RequestParam(required = false) com.example.project.Enum.GoalStatus status) {
+        if (status != null) {
+            return service.getGoalsByStatus(status);
+        }
         return service.getAllGoals();
     }
 
