@@ -8,7 +8,7 @@ class NotificationServiceTest {
 
     @Test
     void resolveDefaultEmail_returnsGmailWhenBlank() {
-        NotificationService service = new NotificationService(null, null, null, null);
+        NotificationService service = new NotificationService(null, null, null, null, null, null, null);
 
         assertEquals("sreyleng143@gmail.com", service.resolveDefaultEmail(""));
         assertEquals("sreyleng143@gmail.com", service.resolveDefaultEmail("   "));
