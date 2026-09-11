@@ -28,11 +28,31 @@ public class HabitService {
         this.gardenService = gardenService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<HabitResponse> getHabits() {
         LocalDate today = LocalDate.now();
-        return habitRepository.findAll()
-                .stream()
+        LocalDate yesterday = today.minusDays(1);
+
+        // Ensure garden decay is processed on load
+        gardenService.getGarden();
+
+        List<Habit> habits = habitRepository.findAll();
+        boolean modified = false;
+        for (Habit h : habits) {
+            // If habit was not completed today and not completed yesterday, its streak
+            // resets to 0
+            if (h.getStreak() > 0 && h.getLastCompletedDate() != null) {
+                if (!h.getLastCompletedDate().equals(today) && !h.getLastCompletedDate().equals(yesterday)) {
+                    h.setStreak(0);
+                    modified = true;
+                }
+            }
+        }
+        if (modified) {
+            habitRepository.saveAll(habits);
+        }
+
+        return habits.stream()
                 .map(h -> habitMapper.toResponse(h, today))
                 .toList();
     }
@@ -40,6 +60,7 @@ public class HabitService {
     @Transactional
     public HabitResponse createHabit(HabitRequest request) {
         Habit habit = habitMapper.toEntity(request);
+        ensureTypeIsAvailable(habit.getType(), null);
         habit = habitRepository.save(habit);
         return habitMapper.toResponse(habit, LocalDate.now());
     }
@@ -48,6 +69,7 @@ public class HabitService {
     public HabitResponse updateHabit(Long id, HabitRequest request) {
         Habit habit = findHabitOrThrow(id);
         habitMapper.applyUpdate(habit, request);
+        ensureTypeIsAvailable(habit.getType(), id);
         habit = habitRepository.save(habit);
         return habitMapper.toResponse(habit, LocalDate.now());
     }
@@ -113,5 +135,15 @@ public class HabitService {
     private Habit findHabitOrThrow(Long id) {
         return habitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Habit not found: " + id));
+    }
+
+    private void ensureTypeIsAvailable(String type, Long habitId) {
+        boolean typeAlreadyUsed = habitId == null
+                ? habitRepository.existsByTypeIgnoreCase(type)
+                : habitRepository.existsByTypeIgnoreCaseAndIdNot(type, habitId);
+
+        if (typeAlreadyUsed) {
+            throw new IllegalStateException("A habit with type '" + type + "' already exists");
+        }
     }
 }

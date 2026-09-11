@@ -64,6 +64,7 @@ class HabitServiceTest {
     @Test
     void createHabit_ShouldSaveAndReturnResponse() {
         HabitRequest request = new HabitRequest("Drink Water", "2L daily", "water");
+        when(habitRepository.existsByTypeIgnoreCase("water")).thenReturn(false);
         when(habitRepository.save(any(Habit.class))).thenReturn(sampleHabit);
 
         HabitResponse response = habitService.createHabit(request);
@@ -74,21 +75,36 @@ class HabitServiceTest {
     }
 
     @Test
+    void createHabit_WhenTypeAlreadyExists_ShouldRejectDuplicate() {
+        HabitRequest request = new HabitRequest("Drink More Water", "3L daily", "water");
+        when(habitRepository.existsByTypeIgnoreCase("water")).thenReturn(true);
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class, () -> habitService.createHabit(request));
+
+        assertEquals("A habit with type 'water' already exists", exception.getMessage());
+        verify(habitRepository, never()).save(any(Habit.class));
+    }
+
+    @Test
     void deleteHabit_WhenExists_ShouldDeleteAndSyncGarden() {
         when(habitRepository.findById(1L)).thenReturn(Optional.of(sampleHabit));
         when(habitRepository.findAll()).thenReturn(Collections.emptyList());
 
-        assertDoesNotThrow(() -> habitService.deleteHabit(1L));
+        boolean result = habitService.deleteHabit(1L);
 
+        assertTrue(result);
         verify(habitRepository, times(1)).delete(sampleHabit);
         verify(habitRepository, times(1)).flush();
     }
 
     @Test
-    void deleteHabit_WhenNotFound_ShouldThrowResourceNotFoundException() {
+    void deleteHabit_WhenNotFound_ShouldReturnFalse() {
         when(habitRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> habitService.deleteHabit(999L));
+        boolean result = habitService.deleteHabit(999L);
+
+        assertFalse(result);
         verify(habitRepository, never()).delete(any());
     }
 }

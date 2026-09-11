@@ -177,24 +177,34 @@ public class GardenService {
     }
 
     /**
-     * Runs at most once per calendar day (gated by lastCheckedDate).
-     * If yesterday was never covered — not fully completed, and no
-     * freeze protected it — the flower wilts one stage and the
-     * streak resets to 0.
+     * Runs daily decay check. If one or more calendar days elapsed
+     * since lastCheckedDate, iterates through every past day. Any day that
+     * was NOT a perfect day AND NOT protected by a freeze wilts the flower
+     * by 1 level (e.g. 8 -> 7 -> 6 -> 5 -> 4 -> 3 -> 2 -> 1 -> 0) and resets the
+     * streak to 0.
      */
     private void settleDecay(Garden garden, LocalDate today) {
-        if (today.equals(garden.getLastCheckedDate()))
+        if (today.equals(garden.getLastCheckedDate())) {
             return;
-
-        LocalDate yesterday = today.minusDays(1);
-        boolean freshStart = garden.getLastCheckedDate() == null;
-        boolean yesterdayCovered = yesterday.equals(garden.getLastPerfectDate())
-                || garden.getFreezeUsedDates().contains(yesterday);
-        boolean alreadyPerfectToday = today.equals(garden.getLastPerfectDate());
-
-        if (!freshStart && !yesterdayCovered && !alreadyPerfectToday) {
-            garden.setGrowthStage(Math.max(0, garden.getGrowthStage() - 1));
-            garden.setStreak(0);
         }
+
+        LocalDate startDate = garden.getLastCheckedDate();
+        if (startDate == null) {
+            startDate = garden.getLastPerfectDate() != null ? garden.getLastPerfectDate() : today;
+        }
+
+        LocalDate dayToCheck = startDate;
+        while (dayToCheck.isBefore(today)) {
+            boolean wasPerfect = dayToCheck.equals(garden.getLastPerfectDate());
+            boolean wasFrozen = garden.getFreezeUsedDates() != null && garden.getFreezeUsedDates().contains(dayToCheck);
+
+            if (!wasPerfect && !wasFrozen) {
+                garden.setGrowthStage(Math.max(0, garden.getGrowthStage() - 1));
+                garden.setStreak(0);
+            }
+            dayToCheck = dayToCheck.plusDays(1);
+        }
+
+        garden.setLastCheckedDate(today);
     }
 }

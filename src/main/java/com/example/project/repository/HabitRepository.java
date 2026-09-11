@@ -10,4 +10,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface HabitRepository extends JpaRepository<Habit, Long> {
+    boolean existsByTypeIgnoreCase(String type);
+
+    boolean existsByTypeIgnoreCaseAndIdNot(String type, Long id);
 }
