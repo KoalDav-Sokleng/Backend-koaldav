@@ -1,5 +1,4 @@
 package com.example.project.service;
-
 import com.example.project.Entity.Habit;
 import com.example.project.dto.exception.ResourceNotFoundException;
 import com.example.project.dto.request.HabitRequest;
@@ -10,7 +9,6 @@ import com.example.project.mapper.HabitMapper;
 import com.example.project.repository.HabitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
