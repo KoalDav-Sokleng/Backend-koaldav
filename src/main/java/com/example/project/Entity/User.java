@@ -1,4 +1,4 @@
-package com.example.project.Entity;
+/*package com.example.project.Entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -39,4 +39,31 @@ public class User {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+}
+    */
+   package com.example.project.Entity;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Getter
+@Setter
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String firstName;
+    private String lastName;
+
+    @Column(unique = true)
+    private String email;
+
+    private String password;
+
+    // NEW: user must verify OTP before they can log in
+    private boolean verified = false;
 }
