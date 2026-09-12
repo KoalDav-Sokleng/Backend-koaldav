@@ -1,6 +1,6 @@
 package com.example.project.service;
 
-import com.example.project.entity.PasswordResetOtp;
+import com.example.project.Entity.PasswordResetOtp;
 import com.example.project.repository.PasswordResetOtpRepository;
 import org.springframework.stereotype.Service;
 
