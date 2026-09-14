@@ -1,5 +1,6 @@
 package com.example.project.Entity;
 
+import com.example.project.Enum.WalletType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,46 +9,45 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "expenses")
+@Table(name = "wallets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Expense {
+public class Wallet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String title;
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private WalletType type = WalletType.PERSONAL;
 
     @Column(nullable = false)
-    private Double amount;
+    @Builder.Default
+    private Double balance = 0.0;
 
-    @Column(nullable = false, length = 50)
-    private String category;
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String currency = "USD";
 
     @Column(length = 20)
     private String icon;
 
+    @Column(length = 20)
+    private String color;
+
     @Column(nullable = false)
-    private LocalDate date;
-
-    @Column(length = 500)
-    private String note;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wallet_id")
-    private Wallet wallet;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "budget_id")
-    private Budget budget;
+    @Builder.Default
+    private Boolean isDefault = false;
 
     @CreationTimestamp
     @Column(updatable = false)

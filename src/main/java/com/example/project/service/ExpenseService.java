@@ -1,13 +1,18 @@
 package com.example.project.service;
 
+import com.example.project.Entity.Budget;
 import com.example.project.Entity.Expense;
+import com.example.project.Entity.Wallet;
+import com.example.project.dto.exception.InsufficientBalanceException;
 import com.example.project.dto.exception.ResourceNotFoundException;
 import com.example.project.dto.request.ExpenseRequest;
 import com.example.project.dto.response.ExpenseListResponse;
 import com.example.project.dto.response.ExpenseResponse;
 import com.example.project.dto.response.FinanceOverviewResponse;
 import com.example.project.mapper.ExpenseMapper;
+import com.example.project.repository.BudgetRepository;
 import com.example.project.repository.ExpenseRepository;
+import com.example.project.repository.WalletRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +26,9 @@ import java.util.stream.Collectors;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
+    private final WalletRepository walletRepository;
+    private final BudgetRepository budgetRepository;
+    private final WalletService walletService;
     private final ExpenseMapper expenseMapper;
 
     private static final Map<String, String> CATEGORY_ICONS = new LinkedHashMap<>();
@@ -46,8 +54,16 @@ public class ExpenseService {
         CATEGORY_COLORS.put("Other", "#EDE9FE");
     }
 
-    public ExpenseService(ExpenseRepository expenseRepository, ExpenseMapper expenseMapper) {
+    public ExpenseService(
+            ExpenseRepository expenseRepository,
+            WalletRepository walletRepository,
+            BudgetRepository budgetRepository,
+            WalletService walletService,
+            ExpenseMapper expenseMapper) {
         this.expenseRepository = expenseRepository;
+        this.walletRepository = walletRepository;
+        this.budgetRepository = budgetRepository;
+        this.walletService = walletService;
         this.expenseMapper = expenseMapper;
     }
 
@@ -161,8 +177,40 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse createExpense(ExpenseRequest request) {
+        // 1. Resolve Wallet
+        Wallet wallet;
+        if (request.getWalletId() != null) {
+            wallet = walletRepository.findById(request.getWalletId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Wallet not found with id: " + request.getWalletId()));
+        } else {
+            wallet = walletService.getOrCreateDefaultWallet();
+        }
+
+        // 2. Validate wallet balance
+        double currentWalletBalance = wallet.getBalance() != null ? wallet.getBalance() : 0.0;
+        if (currentWalletBalance < request.getAmount()) {
+            throw new InsufficientBalanceException(String.format(
+                    "Insufficient balance in wallet '%s'. Current balance: $%.2f, expense amount: $%.2f",
+                    wallet.getName(), currentWalletBalance, request.getAmount()));
+        }
+
+        // 3. Deduct from wallet balance
+        wallet.setBalance(currentWalletBalance - request.getAmount());
+        walletRepository.save(wallet);
+
+        // 4. Resolve Budget (optional)
+        Budget budget = null;
+        if (request.getBudgetId() != null) {
+            budget = budgetRepository.findById(request.getBudgetId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Budget not found with id: " + request.getBudgetId()));
+            double currentSpent = budget.getSpentAmount() != null ? budget.getSpentAmount() : 0.0;
+            budget.setSpentAmount(currentSpent + request.getAmount());
+            budgetRepository.save(budget);
+        }
+
+        // 5. Save Expense
         String icon = getIconForCategory(request.getCategory());
-        Expense entity = expenseMapper.toEntity(request, icon);
+        Expense entity = expenseMapper.toEntity(request, icon, wallet, budget);
         Expense saved = expenseRepository.save(entity);
         return expenseMapper.toResponse(saved);
     }
@@ -171,6 +219,23 @@ public class ExpenseService {
     public boolean deleteExpense(Long id) {
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense not found: " + id));
+
+        // 1. Refund to Wallet
+        if (expense.getWallet() != null) {
+            Wallet wallet = expense.getWallet();
+            double balance = wallet.getBalance() != null ? wallet.getBalance() : 0.0;
+            wallet.setBalance(balance + expense.getAmount());
+            walletRepository.save(wallet);
+        }
+
+        // 2. Adjust Budget spent amount
+        if (expense.getBudget() != null) {
+            Budget budget = expense.getBudget();
+            double spent = budget.getSpentAmount() != null ? budget.getSpentAmount() : 0.0;
+            budget.setSpentAmount(Math.max(0.0, spent - expense.getAmount()));
+            budgetRepository.save(budget);
+        }
+
         expenseRepository.delete(expense);
         return true;
     }

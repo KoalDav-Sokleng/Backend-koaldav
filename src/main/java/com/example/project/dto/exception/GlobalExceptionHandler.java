@@ -31,8 +31,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    // 2. Handle Custom Business Rule Failures (400) e.g., "Need at least 1 hour focus time"
-    @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})
+    // 2. Handle Custom Business Rule Failures (400) e.g., "Need at least 1 hour focus time", InsufficientBalanceException
+    @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class, InsufficientBalanceException.class})
     public ResponseEntity<ErrorResponse> handleBusinessLogicException(
             RuntimeException ex, HttpServletRequest request) {
 
