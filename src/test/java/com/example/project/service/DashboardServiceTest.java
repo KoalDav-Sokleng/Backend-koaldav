@@ -38,8 +38,7 @@ class DashboardServiceTest {
                 goalService,
                 savingGoalService,
                 expenseService,
-                notificationService
-        );
+                notificationService);
     }
 
     @Test
@@ -50,11 +49,13 @@ class DashboardServiceTest {
         HabitResponse mockHabit = new HabitResponse(1L, "Workout", "Everyday", "HEALTH", 3, true, LocalDate.now());
         when(habitService.getHabits()).thenReturn(List.of(mockHabit));
 
-        GoalResponse activeGoal = new GoalResponse(1L, "Learn Spring Boot", "Backend skills", null, "IN_PROGRESS", List.of());
+        GoalResponse activeGoal = new GoalResponse(1L, "Learn Spring Boot", "Backend skills", null, "IN_PROGRESS",
+                List.of());
         GoalResponse completedGoal = new GoalResponse(2L, "Build Portfolio", "Frontend", null, "COMPLETED", List.of());
         when(goalService.getAllGoals()).thenReturn(List.of(activeGoal, completedGoal));
 
-        SavingGoalResponse savingGoal = new SavingGoalResponse(1L, "MacBook Pro", "laptop", new BigDecimal("2000.00"), new BigDecimal("500.00"), null, null, SavingGoalStatus.ACTIVE, List.of());
+        SavingGoalResponse savingGoal = new SavingGoalResponse(1L, "MacBook Pro", "laptop", new BigDecimal("2000.00"),
+                new BigDecimal("500.00"), null, null, SavingGoalStatus.ACTIVE, List.of());
         when(savingGoalService.getAllGoals()).thenReturn(List.of(savingGoal));
 
         FinanceOverviewResponse mockFinance = FinanceOverviewResponse.builder()
