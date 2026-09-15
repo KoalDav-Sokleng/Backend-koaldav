@@ -181,7 +181,8 @@ public class ExpenseService {
         Wallet wallet;
         if (request.getWalletId() != null) {
             wallet = walletRepository.findById(request.getWalletId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Wallet not found with id: " + request.getWalletId()));
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Wallet not found with id: " + request.getWalletId()));
         } else {
             wallet = walletService.getOrCreateDefaultWallet();
         }
@@ -202,7 +203,8 @@ public class ExpenseService {
         Budget budget = null;
         if (request.getBudgetId() != null) {
             budget = budgetRepository.findById(request.getBudgetId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Budget not found with id: " + request.getBudgetId()));
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Budget not found with id: " + request.getBudgetId()));
             double currentSpent = budget.getSpentAmount() != null ? budget.getSpentAmount() : 0.0;
             budget.setSpentAmount(currentSpent + request.getAmount());
             budgetRepository.save(budget);

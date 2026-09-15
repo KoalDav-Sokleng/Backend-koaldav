@@ -52,11 +52,16 @@ public class BudgetService {
         budget.setName(request.getName().trim());
         budget.setCategory(request.getCategory().trim());
         budget.setLimitAmount(request.getLimitAmount());
-        if (request.getPeriod() != null) budget.setPeriod(request.getPeriod());
-        if (request.getStartDate() != null) budget.setStartDate(request.getStartDate());
-        if (request.getEndDate() != null) budget.setEndDate(request.getEndDate());
-        if (request.getIcon() != null) budget.setIcon(request.getIcon());
-        if (request.getColor() != null) budget.setColor(request.getColor());
+        if (request.getPeriod() != null)
+            budget.setPeriod(request.getPeriod());
+        if (request.getStartDate() != null)
+            budget.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null)
+            budget.setEndDate(request.getEndDate());
+        if (request.getIcon() != null)
+            budget.setIcon(request.getIcon());
+        if (request.getColor() != null)
+            budget.setColor(request.getColor());
 
         Budget updated = budgetRepository.save(budget);
         return budgetMapper.toResponse(updated);

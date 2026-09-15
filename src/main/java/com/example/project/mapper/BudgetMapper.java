@@ -16,7 +16,8 @@ public class BudgetMapper {
             return null;
 
         BudgetPeriod period = request.getPeriod() != null ? request.getPeriod() : BudgetPeriod.MONTHLY;
-        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : LocalDate.now().withDayOfMonth(1);
+        LocalDate startDate = request.getStartDate() != null ? request.getStartDate()
+                : LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : startDate.plusMonths(1).minusDays(1);
         String icon = request.getIcon() != null && !request.getIcon().isBlank() ? request.getIcon() : "🎯";
         String color = request.getColor() != null && !request.getColor().isBlank() ? request.getColor() : "#10B981";

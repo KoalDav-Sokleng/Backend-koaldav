@@ -15,7 +15,8 @@ public class WalletMapper {
 
         WalletType type = request.getType() != null ? request.getType() : WalletType.PERSONAL;
         Double balance = request.getInitialBalance() != null ? request.getInitialBalance() : 0.0;
-        String currency = request.getCurrency() != null && !request.getCurrency().isBlank() ? request.getCurrency() : "USD";
+        String currency = request.getCurrency() != null && !request.getCurrency().isBlank() ? request.getCurrency()
+                : "USD";
         String icon = request.getIcon() != null && !request.getIcon().isBlank() ? request.getIcon() : "💳";
         String color = request.getColor() != null && !request.getColor().isBlank() ? request.getColor() : "#6C63FF";
         Boolean isDefault = Boolean.TRUE.equals(request.getIsDefault());
