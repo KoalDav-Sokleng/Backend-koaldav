@@ -33,4 +33,8 @@ public class ExpenseRequest {
 
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
+
+    private Long walletId;
+
+    private Long budgetId;
 }
