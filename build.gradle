@@ -21,15 +21,18 @@ dependencies {
     // 1. Core Web & REST API
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // 2. Database & Persistence (Oracle)
 //    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 //    runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
 
-    //pogressql
+    // PostgreSQL
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
+
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     // 3. Security & JWT Authentication
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -53,6 +56,8 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+// 7. Cloudinary for Image Uploads
+    implementation 'com.cloudinary:cloudinary-http44:1.36.0'
 }
 
 tasks.named('test') {
