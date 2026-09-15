@@ -1,5 +1,6 @@
 package com.example.project.Entity;
 
+import com.example.project.Enum.BudgetPeriod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,42 +13,44 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "expenses")
+@Table(name = "budgets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Expense {
+public class Budget {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String title;
-
-    @Column(nullable = false)
-    private Double amount;
+    private String name;
 
     @Column(nullable = false, length = 50)
     private String category;
 
+    @Column(nullable = false)
+    private Double limitAmount;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Double spentAmount = 0.0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private BudgetPeriod period = BudgetPeriod.MONTHLY;
+
+    private LocalDate startDate;
+
+    private LocalDate endDate;
+
     @Column(length = 20)
     private String icon;
 
-    @Column(nullable = false)
-    private LocalDate date;
-
-    @Column(length = 500)
-    private String note;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wallet_id")
-    private Wallet wallet;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "budget_id")
-    private Budget budget;
+    @Column(length = 20)
+    private String color;
 
     @CreationTimestamp
     @Column(updatable = false)

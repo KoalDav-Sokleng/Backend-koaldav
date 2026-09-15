@@ -19,4 +19,8 @@ public class ExpenseResponse {
     private String note;
     private LocalDate date;
     private Double amount;
+    private Long walletId;
+    private String walletName;
+    private Long budgetId;
+    private String budgetName;
 }

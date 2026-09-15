@@ -1,13 +1,20 @@
 package com.example.project.service;
 
+import com.example.project.Entity.Budget;
 import com.example.project.Entity.Expense;
+import com.example.project.Entity.Wallet;
+import com.example.project.Enum.BudgetPeriod;
+import com.example.project.Enum.WalletType;
+import com.example.project.dto.exception.InsufficientBalanceException;
 import com.example.project.dto.exception.ResourceNotFoundException;
 import com.example.project.dto.request.ExpenseRequest;
 import com.example.project.dto.response.ExpenseListResponse;
 import com.example.project.dto.response.ExpenseResponse;
 import com.example.project.dto.response.FinanceOverviewResponse;
 import com.example.project.mapper.ExpenseMapper;
+import com.example.project.repository.BudgetRepository;
 import com.example.project.repository.ExpenseRepository;
+import com.example.project.repository.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +24,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +37,15 @@ class ExpenseServiceTest {
     @Mock
     private ExpenseRepository expenseRepository;
 
+    @Mock
+    private WalletRepository walletRepository;
+
+    @Mock
+    private BudgetRepository budgetRepository;
+
+    @Mock
+    private WalletService walletService;
+
     @Spy
     private ExpenseMapper expenseMapper = new ExpenseMapper();
 
@@ -38,9 +53,29 @@ class ExpenseServiceTest {
     private ExpenseService expenseService;
 
     private Expense sampleExpense;
+    private Wallet sampleWallet;
+    private Budget sampleBudget;
 
     @BeforeEach
     void setUp() {
+        sampleWallet = Wallet.builder()
+                .id(1L)
+                .name("Personal Wallet")
+                .type(WalletType.PERSONAL)
+                .balance(200.0)
+                .currency("USD")
+                .isDefault(true)
+                .build();
+
+        sampleBudget = Budget.builder()
+                .id(1L)
+                .name("Food Budget")
+                .category("Food")
+                .limitAmount(300.0)
+                .spentAmount(50.0)
+                .period(BudgetPeriod.MONTHLY)
+                .build();
+
         sampleExpense = Expense.builder()
                 .id(1L)
                 .title("Grocery Shopping")
@@ -49,19 +84,25 @@ class ExpenseServiceTest {
                 .icon("🍔")
                 .date(LocalDate.of(2026, 3, 15))
                 .note("Weekly groceries")
+                .wallet(sampleWallet)
+                .budget(sampleBudget)
                 .build();
     }
 
     @Test
-    void createExpense_ShouldMapIconAndSave() {
+    void createExpense_WithWalletAndBudget_ShouldDeductBalanceAndIncrementBudget() {
         ExpenseRequest request = ExpenseRequest.builder()
                 .title("Grocery Shopping")
                 .amount(45.50)
                 .category("Food")
                 .date(LocalDate.of(2026, 3, 15))
                 .note("Weekly groceries")
+                .walletId(1L)
+                .budgetId(1L)
                 .build();
 
+        when(walletRepository.findById(1L)).thenReturn(Optional.of(sampleWallet));
+        when(budgetRepository.findById(1L)).thenReturn(Optional.of(sampleBudget));
         when(expenseRepository.save(any(Expense.class))).thenReturn(sampleExpense);
 
         ExpenseResponse response = expenseService.createExpense(request);
@@ -71,6 +112,32 @@ class ExpenseServiceTest {
         assertEquals("🍔", response.getIcon());
         assertEquals("Food", response.getCategory());
         assertEquals(45.50, response.getAmount());
+        assertEquals(1L, response.getWalletId());
+        assertEquals("Personal Wallet", response.getWalletName());
+        assertEquals(1L, response.getBudgetId());
+        assertEquals("Food Budget", response.getBudgetName());
+
+        assertEquals(154.50, sampleWallet.getBalance());
+        assertEquals(95.50, sampleBudget.getSpentAmount());
+        verify(walletRepository, times(1)).save(sampleWallet);
+        verify(budgetRepository, times(1)).save(sampleBudget);
+    }
+
+    @Test
+    void createExpense_WhenInsufficientBalance_ShouldThrowException() {
+        sampleWallet.setBalance(20.0);
+        ExpenseRequest request = ExpenseRequest.builder()
+                .title("Expensive Dinner")
+                .amount(100.0)
+                .category("Food")
+                .date(LocalDate.of(2026, 3, 15))
+                .walletId(1L)
+                .build();
+
+        when(walletRepository.findById(1L)).thenReturn(Optional.of(sampleWallet));
+
+        assertThrows(InsufficientBalanceException.class, () -> expenseService.createExpense(request));
+        verify(expenseRepository, never()).save(any());
     }
 
     @Test
@@ -109,12 +176,16 @@ class ExpenseServiceTest {
     }
 
     @Test
-    void deleteExpense_WhenExists_ShouldDelete() {
+    void deleteExpense_WhenExists_ShouldRefundWalletAndAdjustBudget() {
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(sampleExpense));
 
         boolean result = expenseService.deleteExpense(1L);
 
         assertTrue(result);
+        assertEquals(245.50, sampleWallet.getBalance());
+        assertEquals(4.50, sampleBudget.getSpentAmount());
+        verify(walletRepository, times(1)).save(sampleWallet);
+        verify(budgetRepository, times(1)).save(sampleBudget);
         verify(expenseRepository, times(1)).delete(sampleExpense);
     }
 
