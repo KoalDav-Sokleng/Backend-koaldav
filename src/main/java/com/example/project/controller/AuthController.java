@@ -1,11 +1,14 @@
 package com.example.project.controller;
 
+import com.example.project.Entity.User;
 import com.example.project.dto.*;
+import com.example.project.repository.UserRepository;
 import com.example.project.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register")
@@ -37,9 +42,13 @@ public class AuthController {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            System.err.println("Login IllegalArgumentException: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Invalid email or password");
+            System.err.println("Login Exception: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(401)
+                    .body(e.getMessage() != null ? e.getMessage() : "Invalid email or password");
         }
     }
 
@@ -91,13 +100,30 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    @Operation(summary = "Reset password using OTP")
+    @Operation(summary = "Reset password using OTP and return JWT for immediate dashboard redirect")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
-            authService.resetPassword(request);
-            return ResponseEntity.ok("Password reset successfully");
+            AuthResponse response = authService.resetPassword(request);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Get the authenticated user profile data required to survive refresh")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(new Object() {
+            public final Long id = user.getId();
+            public final String firstName = user.getFirstName();
+            public final String lastName = user.getLastName();
+            public final String email = user.getEmail();
+            public final String avatar = user.getAvatar() != null ? user.getAvatar() : user.getProfileImageUrl();
+            public final java.time.LocalDateTime createdAt = user.getCreatedAt();
+        });
     }
 }

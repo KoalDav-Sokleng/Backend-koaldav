@@ -27,6 +27,9 @@ public class PasswordResetOtp {
     private String otpCode;
 
     @Column(nullable = false)
+    private String purpose; // LOGIN or RESET_PASSWORD
+
+    @Column(nullable = false)
     private LocalDateTime expiryTime;
 
     @Column(nullable = false)

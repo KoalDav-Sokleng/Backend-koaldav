@@ -30,3 +30,4 @@ public class OpenApiConfig {
                                 .description("Enter your JWT token (without 'Bearer ' prefix) to authorize requests.")));
     }
 }
+

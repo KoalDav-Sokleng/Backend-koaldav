@@ -9,8 +9,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -31,16 +33,18 @@ public class AuthService {
         this.otpService = otpService;
     }
 
-    // 1. REGISTER: Creates user and returns JWT token immediately (no OTP needed for register)
+    // 1. REGISTER: Creates user and returns JWT token immediately (no OTP needed
+    // for register)
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
             throw new IllegalArgumentException("Email already in use");
         }
 
         User user = new User();
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName() != null ? request.getFirstName().trim() : "");
+        user.setLastName(request.getLastName() != null ? request.getLastName().trim() : "");
+        user.setEmail(cleanEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setVerified(true);
 
@@ -54,31 +58,36 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(userDetails);
 
-        return new AuthResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), false, "Registration successful");
+        return new AuthResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), false,
+                "Registration successful");
     }
 
-    // 2. LOGIN: Authenticates credentials, generates & sends 6-digit OTP to user's Gmail
+    // 2. LOGIN: Authenticates credentials, generates & sends 6-digit OTP to user's
+    // Gmail
     public AuthResponse login(LoginRequest request) {
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(cleanEmail, request.getPassword()));
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(cleanEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         // Generate and send 6-digit OTP for login
         otpService.generateAndSendOtp(user.getEmail());
 
-        return new AuthResponse(null, user.getEmail(), user.getFirstName(), user.getLastName(), true, "OTP sent to your Gmail account. Please enter the 6-digit code to continue.");
+        return new AuthResponse(null, user.getEmail(), user.getFirstName(), user.getLastName(), true,
+                "OTP sent to your Gmail account. Please enter the 6-digit code to continue.");
     }
 
     // 2b. VERIFY LOGIN OTP: Validates OTP and returns JWT token
     public AuthResponse verifyLoginOtp(VerifyOtpRequest request) {
-        boolean isValid = otpService.verifyOtp(request.getEmail(), request.getOtpCode());
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        boolean isValid = otpService.verifyOtp(cleanEmail, request.getOtpCode(), "LOGIN");
         if (!isValid) {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(cleanEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserDetails userDetails = org.springframework.security.core.userdetails.User
@@ -89,31 +98,51 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(userDetails);
 
-        return new AuthResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), false, "Login successful");
+        return new AuthResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), false,
+                "Login successful");
     }
 
     // 3. FORGOT PASSWORD: Sends 6-digit OTP code to user's Gmail
     public void forgotPassword(ForgotPasswordRequest request) {
-        if (!userRepository.existsByEmail(request.getEmail())) {
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        if (!userRepository.existsByEmailIgnoreCase(cleanEmail)) {
             throw new IllegalArgumentException("No account found with this email");
         }
-        otpService.generateAndSendOtp(request.getEmail());
+        otpService.generateAndSendOtp(cleanEmail, "RESET_PASSWORD");
     }
 
     // 3b. VERIFY OTP: Validates OTP code
     public boolean verifyOtp(VerifyOtpRequest request) {
-        return otpService.verifyOtp(request.getEmail(), request.getOtpCode());
+        // Do not mark the OTP used here. The next screen submits it to
+        // resetPassword, which validates and consumes it exactly once.
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        return otpService.isOtpValid(cleanEmail, request.getOtpCode(), "RESET_PASSWORD");
     }
 
-    // 4. RESET PASSWORD: Validates OTP and sets new password
-    public void resetPassword(ResetPasswordRequest request) {
-        boolean isValid = otpService.verifyOtp(request.getEmail(), request.getOtpCode());
+    // 4. RESET PASSWORD: Validates OTP and sets new password, then returns JWT for
+    // immediate dashboard redirect
+    @Transactional
+    public AuthResponse resetPassword(ResetPasswordRequest request) {
+        String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        boolean isValid = otpService.verifyOtp(cleanEmail, request.getOtpCode(), "RESET_PASSWORD");
         if (!isValid) {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(cleanEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // Persist the BCrypt hash before generating a session. Flushing here
+        // makes the password change immediately visible to the next login.
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+
+        UserDetails userDetails = org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities("USER")
+                .build();
+
+        String token = jwtUtil.generateToken(userDetails);
+        return new AuthResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), false,
+                "Password reset successful");
     }
 }

@@ -30,7 +30,24 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "avatar", columnDefinition = "TEXT")
+    private String avatar;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
     // User must verify OTP before they can log in
     @Column(nullable = false)
     private boolean verified = false;
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
+    @Column(name = "profile_image_public_id")
+    private String profileImagePublicId;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = java.time.LocalDateTime.now();
+    }
 }
